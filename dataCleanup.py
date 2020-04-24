@@ -1,4 +1,5 @@
 import statsmodels.api as sm
+from statsmodels.sandbox.regression.predstd import wls_prediction_std
 import numpy as np
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures
@@ -11,7 +12,8 @@ register_matplotlib_converters()
 dataIn = pd.read_csv ('csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_US.csv')
 
 # unitedStates = dataIn.query('Country_Region == "US"') #filter to just united states
-unitedStates = dataIn[dataIn.columns[10:]] #remove unnecessary columns
+unitedStates = dataIn.query('Province_State == "Washington"')
+unitedStates = unitedStates[unitedStates.columns[10:]] #remove unnecessary columns
 unitedStates = unitedStates.T # transpose the data set
 unitedStates.columns = unitedStates.iloc[0] # uses labels as the column headers
 unitedStates = unitedStates.iloc[1:, :] # remove the first row of column headers
@@ -20,6 +22,7 @@ unitedStates = unitedStates.iloc[1:, :] # remove the first row of column headers
 # # unitedStates = unitedStates.loc[:, (unitedStates.sum() > 10000)] #filter to cities that add up to more than 10000
 unitedStates['US Total'] = unitedStates.sum(axis=1) # add total column field
 unitedStatesTotal = unitedStates.iloc[:, [-1]] # filter to just the total column
+print(unitedStates.head())
 
 modelUnitedStates = unitedStatesTotal
 modelUnitedStates.index = range(0, len(modelUnitedStates))
@@ -64,11 +67,26 @@ x_transformed = sm.add_constant(x_transformed)
 
 model = sm.OLS(y, x_transformed)
 results = model.fit()
+predictions = results.predict()
 
-unitedStatesTotal.plot()
+# unitedStatesTotal.plot()
+# predictions.plot()
+# pyplot.show()
+
+#set the interval lines for the model
+prstd, iv_l, iv_u = wls_prediction_std(results)
+
+fig, ax = pyplot.subplots(figsize=(8,6))
+
+ax.plot(x, y, 'o', label="data")
+# ax.plot(x, y_true, 'b-', label="True")
+ax.plot(x, results.fittedvalues, 'r', label="OLS")
+ax.plot(x, iv_u, 'r--')
+ax.plot(x, iv_l, 'r--')
+ax.legend(loc='best')
 pyplot.show()
 
-print(results.summary())
+# print(results.summary())
 
 # unitedStatesTotal.plot()
 # pyplot.show()
